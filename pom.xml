@@ -126,6 +126,6 @@
                 </configuration>
             </plugin>
         </plugins>
-        <finalName>auth</finalName>
+        <finalName>us</finalName>
     </build>
 </project>
