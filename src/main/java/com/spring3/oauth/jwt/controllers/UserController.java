@@ -55,7 +55,7 @@ public class UserController {
             return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
         } catch (Exception e) {
             statusCode = HttpStatus.INTERNAL_SERVER_ERROR.value();
-            apiResponse = new ApiResponse(statusCode, "Failed", userResponse);
+            apiResponse = new ApiResponse(statusCode, "Failed:"+e, userResponse);
             return new ResponseEntity<>(apiResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
