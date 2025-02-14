@@ -85,7 +85,7 @@ public class UserController {
         }
         return new ResponseEntity<>(userResponses, HttpStatus.OK);
     }
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+
     @PostMapping("/assignRole")
     public ResponseEntity<ApiResponse> assignRole(@RequestParam List<String> roleIds, @RequestParam String userId) {
         ApiResponse apiResponse = null;
