@@ -44,6 +44,12 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
     @Value("${auth.base.url}")
     private String apiUrl;
 
+    @Value("${proxy.base.url}")
+    private String proxyApiUrl;
+
+    @Value("${proxy.update.agent.base.url}")
+    private String proxyupdateAgentApiUrl;
+
     public
     ModelMapper modelMapper = new ModelMapper();
     public static final String _255 = "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
@@ -52,49 +58,54 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
     @Transactional(rollbackFor = Exception.class)
     @Override
     public UserInfo saveUser(UserInfo user) {
-        if(user.getUsername()== null){
-            throw new RuntimeException("Parameter account number is not found in request..!!");
-        } else if(user.getPassword() == null){
-            throw new RuntimeException("Parameter password is not found in request..!!");
-        }
-        Optional<UserInfo> persitedUser = Optional.of(new UserInfo());
-         UserInfo savedUser = null;
-
-        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String rawPassword = user.getPassword();
-        String encodedPassword = encoder.encode(rawPassword);
-
-        user.setUsername(user.getUsername());
-        user.setPassword(encodedPassword);
-        user.setStatus("Active");
-        try {
-            if (user.getId() > 0) {
-                UserInfo oldUser = userRepository.findFirstById(user.getId());
-                oldUser.setCreatedBy(String.valueOf(oldUser.getUserId()));
-                if (oldUser != null) {
-                    oldUser.setId(user.getId());
-                    oldUser.setPassword(user.getPassword());
-                    oldUser.setUsername(user.getUsername());
-                    oldUser.setVerificationCode(user.getVerificationCode());
-                    oldUser.setUpdatedAt(LocalDateTime.now());
-                    oldUser.setDeviceType(user.getDeviceType());
-                    oldUser.setUpdatedBy(String.valueOf(oldUser.getUserId()));
-                    oldUser.setRoles(user.getRoles());
-                    savedUser = userRepository.save(oldUser);
-                    persitedUser = userRepository.findById(savedUser.getId());
-                } else {
-                    throw new RuntimeException("Can't find record with identifier: " + persitedUser.get().getId());
-                }
-            } else {
-                user.setCreatedAt(LocalDateTime.now());
-                persitedUser = Optional.of(userRepository.save(user));
+        {
+            if(user.getUsername()== null){
+                throw new RuntimeException("Parameter account number is not found in request..!!");
+            } else if(user.getPassword() == null){
+                throw new RuntimeException("Parameter password is not found in request..!!");
             }
-            persitedUser.get().setUserId((int) persitedUser.get().getId());
-        } catch (Exception e) {
-            e.printStackTrace();
+            Optional<UserInfo> persitedUser = Optional.of(new UserInfo());
+            UserInfo savedUser = null;
+
+            BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+            String rawPassword = user.getPassword();
+            String encodedPassword = encoder.encode(rawPassword);
+
+            user.setUsername(user.getUsername());
+            user.setPassword(encodedPassword);
+            user.setStatus("Active");
+            try {
+                if (user.getId() > 0) {
+                    Optional<UserInfo> oldUser = userRepository.findById(user.getId());
+                    oldUser.get().setCreatedBy(String.valueOf(oldUser.get().getUserId()));
+                    if (!oldUser.isEmpty()) {
+                        oldUser.get().setUserId(user.getId());
+                        oldUser.get().setPassword(user.getPassword());
+                        oldUser.get().setUsername(user.getUsername());
+                        oldUser.get().setVerificationCode(user.getVerificationCode());
+                        oldUser.get().setUpdatedAt(LocalDateTime.now());
+                        oldUser.get().setDeviceType(user.getDeviceType());
+                        oldUser.get().setUpdatedBy(String.valueOf(oldUser.get().getUserId()));
+                        oldUser.get().setRoles(user.getRoles());
+                        savedUser = userRepository.save(oldUser.get());
+                        persitedUser = userRepository.findById(savedUser.getId());
+                    } else {
+                        throw new RuntimeException("Can't find record with identifier: " + persitedUser.get().getId());
+                    }
+                } else {
+                    user.setCreatedAt(LocalDateTime.now());
+                    persitedUser = Optional.of(userRepository.save(user));
+                    persitedUser.get().setUserId((persitedUser.get().getId()));
+                }
+                // persitedUser.get().setUId(String.valueOf(persitedUser.get().getId()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            updateUserDatainAuth(persitedUser.get());
+            addAgentDatainProxy(persitedUser.get(), proxyApiUrl);
+            return persitedUser.get();
         }
-        updateUserDatainAuth(persitedUser.get());
-        return persitedUser.get();
     }
 
     public String updateUserDatainAuth(UserInfo user) {
@@ -103,6 +114,41 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
         HttpEntity<UserInfo> request = new HttpEntity<>(user, headers);
         ResponseEntity<String> response = restTemplate.exchange(apiUrl, HttpMethod.POST, request, String.class);
         return response.getBody();
+    }
+    public String addAgentDatainProxy(UserInfo user, String url) {
+        HttpHeaders headers = new HttpHeaders();
+       headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<UserInfo> request = new HttpEntity<>(user, headers);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
+        return response.getBody();
+    }
+
+    @Override
+    public UserInfo updateAgentInfo(UserInfo user) {
+        UserInfo savedUser = null;
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String rawPassword = user.getPassword();
+        String encodedPassword = encoder.encode(rawPassword);
+
+        user.setUsername(user.getUsername());
+        user.setPassword(encodedPassword);
+        user.setStatus("Active");
+        Optional<UserInfo> existingUser = userRepository.findById((long) user.getId());
+        if (existingUser != null) {
+            existingUser.get().setCreatedBy(String.valueOf(existingUser.get().getUserId()));
+            existingUser.get().setUserId(user.getId());
+            existingUser.get().setPassword(user.getPassword());
+            existingUser.get().setUsername(user.getUsername());
+            existingUser.get().setVerificationCode(user.getVerificationCode());
+            existingUser.get().setUpdatedAt(LocalDateTime.now());
+            existingUser.get().setDeviceType(user.getDeviceType());
+            existingUser.get().setUpdatedBy(String.valueOf(existingUser.get().getUserId()));
+            savedUser = userRepository.save(existingUser.get());
+        }
+        updateUserDatainAuth(savedUser);
+        addAgentDatainProxy(savedUser, proxyupdateAgentApiUrl);
+        return savedUser;
     }
     @Override
     public UserInfo getUser() {
@@ -167,6 +213,32 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
     public UserInfo getUserByUserName(String userName) {
         UserInfo userInfo = userRepository.findRolesByUsername(userName);
         //UserInfo user = modelMapper.map(userInfo, UserInfoResponse.class);
+        return userInfo;
+    }
+
+    @Override
+    public UserInfo revokRole(List<String> roleIds, String userId) {
+        Set<UserRole> roleList = new HashSet<>();
+        Optional<UserRole> userRole = null;
+        UserInfo userInfo = null;
+        try {
+            // Fetch the user
+            Optional<UserInfo> userInfoOpt = userRepository.findById(Long.valueOf(userId));
+            if (userInfoOpt.isEmpty()) {
+                throw new RuntimeException("User not found with ID: " + userId);
+            }
+            userInfo = userInfoOpt.get();
+
+            // Get existing roles
+            Set<UserRole> existingRoles = userInfo.getRoles();
+            existingRoles.removeIf(role -> roleIds.contains(String.valueOf(role.getId())));
+
+            // Set updated roles and save
+            userInfo.setRoles(existingRoles);
+            return userRepository.save(userInfo);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return userInfo;
     }
 

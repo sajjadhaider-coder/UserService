@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -60,6 +61,21 @@ public class UserController {
         }
     }
 
+    @PostMapping("/updateUserProfile")
+    public  ResponseEntity<ApiResponse> updateAgentProfile(@RequestBody UserInfo userInfo) {
+        int statusCode = 0;
+        ApiResponse response = null;
+        try {
+            statusCode = HttpStatus.OK.value();
+            UserInfo agentProfile = userService.updateAgentInfo(userInfo);
+            response = new ApiResponse<>(HttpStatus.OK.value(), "SUCCESS", agentProfile);
+        } catch(Exception e) {
+            statusCode = HttpStatus.UNAUTHORIZED.value();
+            response = new ApiResponse<>(HttpStatus.UNAUTHORIZED.value(), "FAILURE", null);
+        }
+        return new ResponseEntity<>(response, HttpStatusCode.valueOf(statusCode));
+    }
+
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<List<UserInfo>> getAllUsers() {
@@ -77,6 +93,24 @@ public class UserController {
         UserInfo userResponse = null;
         try {
             userResponse = userService.assignRole(roleIds, userId);
+            statusCode = HttpStatus.OK.value();
+            apiResponse = new ApiResponse(statusCode, "Success", userResponse);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+        } catch (Exception e) {
+            statusCode = HttpStatus.INTERNAL_SERVER_ERROR.value();
+            apiResponse = new ApiResponse(statusCode, "Success", userResponse);
+            return new ResponseEntity<>(apiResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PostMapping("/revokRole")
+    public ResponseEntity<ApiResponse> revoknRole(@RequestParam List<String> roleIds, @RequestParam String userId) {
+        ApiResponse apiResponse = null;
+        int statusCode = 0;
+        UserInfo userResponse = null;
+        try {
+            userResponse = userService.revokRole(roleIds, userId);
             statusCode = HttpStatus.OK.value();
             apiResponse = new ApiResponse(statusCode, "Success", userResponse);
             return new ResponseEntity<>(apiResponse, HttpStatus.OK);

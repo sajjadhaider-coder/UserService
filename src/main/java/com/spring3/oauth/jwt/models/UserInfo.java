@@ -53,14 +53,20 @@ public class UserInfo {
     @Column(name = "CREATED_BY")
     private String createdBy;
 
-    @Column(name = "USER_ID", nullable = false)
-    private int userId;
+    @Column(name = "USER_ID")
+    private Long userId;
 
     @Column(name = "UPDATED_AT")
     private LocalDateTime updatedAt;
 
     @Column(name = "UPDATED_BY")
     private String updatedBy;
+
+    @Column(name = "PARENT_ID")
+    private String parentId;
+
+    @Column(name = "BALANCE")
+    private String userBalance;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     private Set<UserRole> roles = new HashSet<>();
