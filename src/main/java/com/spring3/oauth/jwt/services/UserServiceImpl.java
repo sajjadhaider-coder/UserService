@@ -50,6 +50,10 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
     @Value("${proxy.update.agent.base.url}")
     private String proxyupdateAgentApiUrl;
 
+    @Value("${auth.delete.user.URL}")
+    private String findAndDeleteUserInAuthURL;
+    @Value("${agent.delete.user.URL}")
+    private String findAndDeleteUserInAgentServiceURL;
     public
     ModelMapper modelMapper = new ModelMapper();
     public static final String _255 = "(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)";
@@ -283,12 +287,29 @@ public class UserServiceImpl implements com.spring3.oauth.jwt.services.UserServi
             Optional<UserInfo> userInfo = userRepository.findById(userId);
             if(!userInfo.isEmpty()) {
                 userRepository.delete(userInfo.get());
-                isDeleted = true;
+                findAndDeleteUserInAgenService(userInfo.get());
+                findandDeleteUserInAuth(userInfo.get());
+                 isDeleted = true;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return isDeleted;
+    }
+
+    private String findandDeleteUserInAuth(UserInfo user) {
+
+        Map<String, String> uriVariables = new HashMap<>();
+        uriVariables.put("userId", String.valueOf(user.getUserId()));
+        ResponseEntity<String> response = restTemplate.exchange(findAndDeleteUserInAuthURL, HttpMethod.POST, null, String.class, uriVariables);
+        return response.getBody();
+    }
+
+    private String findAndDeleteUserInAgenService(UserInfo user) {
+        Map<String, String> uriVariables = new HashMap<>();
+        uriVariables.put("userId", String.valueOf(user.getUserId()));
+        ResponseEntity<String> response = restTemplate.exchange(findAndDeleteUserInAgentServiceURL, HttpMethod.POST, null, String.class, uriVariables);
+        return response.getBody();
     }
 
     public String getIPLocation(String ip) {

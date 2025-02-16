@@ -142,6 +142,7 @@ public class UserController {
         return new ResponseEntity<>("Welcome", HttpStatus.OK);  // 200 OK for a successful request
     }
 
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("/deleteUser")
     public ResponseEntity<ApiResponse> deleteUser(@RequestParam Long userId){
         int statusCode = 0;
